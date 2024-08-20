@@ -1,0 +1,87 @@
+- name: Traefik swarm stack play
+  hosts: all
+  become: true
+
+  vars:
+    nolog_flag: true  # Global variable to control logging
+
+  tasks:
+    - name: ping
+      ansible.builtin.ping:
+
+    - name: install dependencies 
+      ansible.builtin.dnf:
+        state: latest
+        name:
+          - python3
+          - python3-pip
+
+    - name: Install pip dependencies
+      ansible.builtin.pip:
+        name:
+          - hvac   # HCP Vault 
+          - docker
+          - PyYAML
+          - jsondiff
+
+#################################################################################
+
+    - name: Get info on Docker Swarm
+      community.docker.docker_swarm_info:
+      ignore_errors: true
+      register: result
+
+    - name: Check if the node is compatible
+      ansible.builtin.fail:
+        msg: "This host does not seem to be a swarm manager. Exiting."
+      when: not (result.can_talk_to_docker and result.docker_swarm_active and result.docker_swarm_manager)
+
+#################################################################################
+
+    - name: Transfer Vault secret to Swarm secret
+      community.docker.docker_secret:
+        name: RFC2136_TSIG_KEY
+        data: "{{ lookup('community.hashi_vault.vault_kv2_get', 'infra-swarm/traefik', engine_mount_point='secret').secret.RFC2136_TSIG_KEY | b64encode}}"
+        data_is_b64: true
+        state: present
+
+    - name: Transfer Vault secret to Swarm secret
+      community.docker.docker_secret:
+        name: RFC2136_TSIG_SECRET
+        data: "{{ lookup('community.hashi_vault.vault_kv2_get', 'infra-swarm/traefik', engine_mount_point='secret').secret.RFC2136_TSIG_SECRET | b64encode}}"
+        data_is_b64: true
+        state: present
+
+# ################################################################################
+    - name: Create network for traefik
+      community.docker.docker_network:
+        name: traefik
+        attachable: false
+        driver: overlay
+        state: present
+
+# ################################################################################
+
+    - name: Copy stack files
+      ansible.builtin.copy:
+        src: ../stack-001-traefik/
+        dest: /opt/init/stack-001-traefik/
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Touch acme cache file
+      ansible.builtin.file:
+        path: /opt/init/stack-001-traefik/acme.json
+        state: touch
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Deploy stack from a compose file
+      community.docker.docker_stack:
+        state: present
+        prune: true
+        name: traefik
+        compose:
+          - "/opt/init/stack-001-traefik/compose-traefik.yaml"

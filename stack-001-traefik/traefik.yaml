@@ -1,0 +1,134 @@
+################################################################
+# Global configuration - 
+# https://doc.traefik.io/traefik/reference/static-configuration/file/
+################################################################
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+################################################################
+# Logs - https://doc.traefik.io/traefik/observability/logs/
+################################################################
+log:
+  level: INFO # Options: DEBUG, PANIC, FATAL, ERROR (Default), WARN, and INFO
+  # filePath: /logs/traefik.log # Default is to STDOUT
+  # format: json # Uses text format (common) by default
+  noColor: false # Recommended to be true when using common
+  maxSize: 100 # In megabytes
+  compress: true # gzip compression when rotating
+
+################################################################
+# Access logs - https://doc.traefik.io/traefik/observability/access-logs/
+################################################################
+accessLog:
+  addInternals: true  # things like ping@internal
+  # filePath: /logs/access.log # In the Common Log Format (CLF) by default
+  bufferingSize: 100 # Number of log lines
+  fields:
+    names:
+      StartUTC: drop  # Write logs in Container Local Time instead of UTC
+  filters:
+    statusCodes:
+      - "204-299"
+      - "400-499"
+      - "500-599"
+
+################################################################
+# Metrics    - https://doc.traefik.io/traefik/observability/metrics/overview/
+# Prometheus - https://doc.traefik.io/traefik/observability/metrics/prometheus/
+################################################################
+metrics:
+  addInternals: true
+  prometheus:
+    manualRouting: true        # Disables the default internal router in order to allow one to create a custom router for the prometheus@internal service.
+    addEntryPointsLabels: true # Enable metrics on entry points.
+    addRoutersLabels: true     # Enable metrics on routers.
+    addServicesLabels: true    # Enable metrics on services.
+
+################################################################
+# API and Dashboard - https://doc.traefik.io/traefik/operations/dashboard/
+################################################################
+api:
+  dashboard: true #Enable the dashboard at api@internal service. 
+  disableDashboardAd: true
+  debug: true
+
+################################################################
+# Entrypoints - https://doc.traefik.io/traefik/routing/entrypoints/
+################################################################
+entryPoints:
+#  
+  http:
+    address: :80
+    forwardedHeaders:
+      trustedIPs:
+        - 127.0.0.1/32
+        - 192.168.0.0/16
+        - 172.16.0.0/12
+        - 10.0.0.0/8
+      # redirections:
+      #   entrypoint:
+      #     to: https
+      #     scheme: https
+# 
+  https:
+    address: :443
+    http:
+      tls: {}
+    forwardedHeaders:
+      trustedIPs:
+        - 127.0.0.1/32
+        - 192.168.0.0/16
+        - 172.16.0.0/12
+        - 10.0.0.0/8
+
+################################################################
+# Providers - https://doc.traefik.io/traefik/providers/docker/
+################################################################
+providers:
+#  
+  file:
+    directory: /config
+    watch: true
+#  
+  swarm:
+    endpoint: unix:///var/run/docker.sock
+    useBindPortIP: false    # use the IP/Port attached to the container's binding instead of its inner network IP/Port
+    exposedByDefault: false # If set to false, containers that do not have a traefik.enable=true label are ignored from the resulting routing configuration.
+    network: traefik        # Defines a default docker network to use for connections to all containers.
+    # defaultRule: Host(`{{ .Name }}.{{ index .Labels "customLabel"}}`)
+    watch: true
+    # constraints: ""
+    # allowEmptyServices: true # any 'servers load balancer' defined for Docker containers is created regardless of the healthiness of the corresponding containers.
+
+################################################################
+# ACME servers - https://doc.traefik.io/traefik/https/acme/
+################################################################
+certificatesResolvers:
+  homelab-alpn:
+    acme:
+      email: acme@homelab.lan
+      storage: /acme/acme.json
+      caServer: https://acme.lan:8443/acme/ACME@acme.lan/directory
+      certificatesDuration: 48
+      tlsChallenge: {}
+  homelab-http:
+    acme:
+      email: acme@homelab.lan
+      storage: /acme/acme.json
+      caServer: https://acme.lan:8443/acme/ACME@acme.lan/directory
+      certificatesDuration: 48
+      httpChallenge:
+        entryPoint: http
+  homelab-dns:
+    acme:
+      email: acme@homelab.lan
+      storage: /acme/acme.json
+      caServer: https://acme.lan:8443/acme/ACME@acme.lan/directory
+      certificatesDuration: 48
+      dnsChallenge:
+        provider: rfc2136
+        disablePropagationCheck: true
+        delayBeforeCheck: 1
+        resolvers:
+          - ns1.lan:53

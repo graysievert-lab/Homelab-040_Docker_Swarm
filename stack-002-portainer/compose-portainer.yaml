@@ -1,0 +1,34 @@
+services:
+
+  portainer:
+    #image: portainer/portainer-ce:alpine-sts # Community edition
+    image: portainer/portainer-ee:alpine-sts # Business edition
+    command: --host unix:///var/run/docker.sock --bind-https=":9443" --http-disabled --log-level INFO
+    volumes:
+      - portainer_data:/data
+      - /var/run/docker.sock:/var/run/docker.sock # for agentless installation on one node
+      - /etc/pki/ca-trust/source/anchors/localCA.crt:/etc/ssl/certs/localCA.crt:ro # local CA cert, allows portainer to communicate with OAuth and other servicec
+    networks:
+      - traefik
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        - traefik.enable=true
+      # service's ports discovery      
+        - traefik.http.services.portainer_p_9443.loadbalancer.server.port=9443
+        - traefik.http.services.portainer_p_9443.loadbalancer.server.scheme=https
+        - traefik.http.services.portainer_p_9443.loadbalancer.serversTransport=insecureTLS@file
+      # Confugure https router "portainer"
+        - "traefik.http.routers.portainer.entrypoints=https"
+        - "traefik.http.routers.portainer.rule=Host(`portainer.swarm.lan`) || Host(`swarm.lan`)"
+        - "traefik.http.routers.portainer.service=portainer_p_9443"
+        - "traefik.http.routers.portainer.tls.certresolver=homelab-alpn"
+
+networks:
+  traefik:
+    external: true
+
+volumes:
+  portainer_data:
+    external: true

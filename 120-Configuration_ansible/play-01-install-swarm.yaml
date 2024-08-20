@@ -1,0 +1,112 @@
+- name: Install Swarm play
+  hosts: all
+  become: true
+
+  tasks:
+    - name: ping
+      ansible.builtin.ping:
+
+    ################################################################################
+    - name: Install docker
+      block:
+        - name: register repo
+          ansible.builtin.yum_repository:
+            enabled: true
+            name: docker-ce-stable
+            description: Docker CE Stable
+            baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+            gpgkey: https://download.docker.com/linux/centos/gpg
+            gpgcheck: true
+        - name: install docker
+          ansible.builtin.dnf:
+            state: latest
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+        - name: add `rocky` user to docker group
+          ansible.builtin.user:
+            name: rocky
+            groups: docker
+            append: true
+
+    ################################################################################
+    - name: Configure docker
+      vars:
+        docker_config_path: /etc/docker/daemon.json
+        docker_config_content: |
+          {
+            "metrics-addr": "{{ ansible_default_ipv4.address }}:9323",
+            "host-gateway-ip": "{{ ansible_default_ipv4.address }}"
+          }
+      block:
+        - name: Ensure /etc/docker dir exists
+          ansible.builtin.file: 
+            path=/etc/docker
+            state=directory
+        - name: Copy docker daemon config
+          ansible.builtin.copy:
+            dest: "{{ docker_config_path }}"
+            content: "{{ docker_config_content }}"
+            mode: "0644"
+        - name: Reload unitfiles, Enable and Start service
+          ansible.builtin.systemd_service:
+            daemon_reload: true
+            name: docker.service
+            state: started
+            enabled: true
+
+    ################################################################################
+    - name: Configure Firewall
+      block:
+        - name: Install firewalld
+          ansible.builtin.dnf:
+            state: latest
+            name:
+              - firewalld
+
+        - name: enable firewalld.service
+          ansible.builtin.systemd_service:
+            name: firewalld.service
+            state: started
+            enabled: true
+
+        - name: allow traffic for services
+          ansible.posix.firewalld:
+            service: "{{ item }}"
+            zone: public
+            state: enabled
+            permanent: true
+            immediate: true
+          loop:
+            - http
+            - https
+            - docker-swarm
+
+    ################################################################################
+    - name: Initialize swarm node
+      block:
+        - name: install dependencies for community.docker modules
+          ansible.builtin.dnf:
+            state: latest
+            name:
+              - python3
+              - python3-pip
+
+        - name: Install
+          ansible.builtin.pip:
+            name:
+              - docker
+              - PyYAML
+              - jsondiff
+
+        - name: "Swarm initialization for {{ ansible_default_ipv4.address }}"
+          community.docker.docker_swarm:
+            state: present
+            advertise_addr: "{{ ansible_default_ipv4.address }}"
+            default_addr_pool:
+              - "172.16.0.0/12"
+            subnet_size: 24
+
+    ################################################################################
+
