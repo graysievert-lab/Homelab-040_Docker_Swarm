@@ -30,7 +30,7 @@ resource "proxmox_virtual_environment_pool" "main" {
 ## Virtual Machine
 ########################################
 module "proxmox_vm_main" {
-  source = "git::https://github.com/graysievert/terraform-modules-proxmox_vm?ref=v1.0.0"
+  source = "git::https://github.com/graysievert-lab/terraform-modules-proxmox_vm?ref=v1.0.0"
 
   metadata = {
     node_name    = local.proxmox_node

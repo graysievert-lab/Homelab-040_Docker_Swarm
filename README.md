@@ -49,7 +49,7 @@ Prerequisites:
 - Vault secrets:
   - `infra-homelab/dns_zone_lan` contains key `TF_VAR_TSIG_key`  with value formatted as  `key_name.|key_material`
 
-NOTE: The user for remote access is `rocky`. Any SSH key signed by Vault's SSH CA `ssh-vm-usercert` will provide access (see [example](https://github.com/graysievert/Homelab-030_Secrets_and_Auth/tree/master/template_project_secrets)).
+NOTE: The user for remote access is `rocky`. Any SSH key signed by Vault's SSH CA `ssh-vm-usercert` will provide access (see [example](https://github.com/graysievert-lab/Homelab-030_Secrets_and_Auth/tree/master/template_project_secrets)).
 
 ### Initialize environment
 
@@ -71,8 +71,7 @@ $ vault login -method=oidc
 ```
 
 <details>
-  <summary>NOTE: OIDC Login via CLI on a Headless Server.</summary>
-
+  <summary>**NOTE: OIDC Login via CLI on a Headless Server**</summary>
 
 Command `vault login -method=oidc` will try to open a web browser to finish login. Sometimes this is not feasible, but in any case vault will output the URL that needs to be visited in a browser, then will open port `8250` on address `127.0.0.1`  and will wait for a GET request on that port :
 
@@ -159,7 +158,7 @@ The directory `120-Configuration_ansible` contains the following files:
 - `play-02-deploy-stack-traefik.yaml` - Uploads `traefik` stack files and deploys the stack
 - `play-03-deploy-stack-portainer.yaml` - Uploads `portainer` stack files and deploys the stack
 - `play-04-deploy-stack-portainer-first.yaml` - Alternative Portainer play for scenario B
-- `secrets.list` - the list of secrets in Vault that could be used to [generate Vault token for a user with limited access to Vault](https://github.com/graysievert/Homelab-030_Secrets_and_Auth/tree/master/template_project_secrets) (not used in this scenario).
+- `secrets.list` - the list of secrets in Vault that could be used to [generate Vault token for a user with limited access to Vault](https://github.com/graysievert-lab/Homelab-030_Secrets_and_Auth/tree/master/template_project_secrets) (not used in this scenario).
 
 ### Prepare environment
 
@@ -350,7 +349,7 @@ Go to `Home`, and select `Primary` on the environments list. Then go to `Stacks`
 
 - Name: `traefik`
 - Build method: `repository`
-- Repository URL: `https://github.com/graysievert/Homelab-040_Docker_Swarm`
+- Repository URL: `https://github.com/graysievert-lab/Homelab-040_Docker_Swarm`
 - Repository reference: `refs/heads/main`
 - Compose path: `/stack-001-traefik/compose-traefik.yaml`
 - GitOps updates: `on`
